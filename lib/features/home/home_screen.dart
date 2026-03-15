@@ -5,9 +5,10 @@ import 'package:hijri/hijri_calendar.dart';
 
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
-import '../../constants/app_strings.dart';
+import '../../core/bloc/locale_cubit.dart';
 import '../../core/models/purity.dart';
 import '../../core/services/zakat_calculator.dart';
+import '../../l10n/app_localizations.dart';
 import 'bloc/home_bloc.dart';
 import 'bloc/home_event.dart';
 import 'bloc/home_state.dart';
@@ -21,21 +22,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final Map<int, TextEditingController> _controllers = {};
-
-  static const List<String> _hijriMonths = [
-    'محرم',
-    'صفر',
-    'ربيع الأول',
-    'ربيع الثاني',
-    'جمادى الأولى',
-    'جمادى الآخرة',
-    'رجب',
-    'شعبان',
-    'رمضان',
-    'شوال',
-    'ذو القعدة',
-    'ذو الحجة',
-  ];
 
   @override
   void initState() {
@@ -62,8 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
         : value.toString();
   }
 
-  String _formatHijriDate(HijriCalendar date) {
-    return '${date.hDay} ${_hijriMonths[date.hMonth - 1]} ${date.hYear} هـ';
+  String _formatHijriDate(HijriCalendar date, AppLocalizations l10n) {
+    return '${date.hDay} ${l10n.hijriMonths[date.hMonth - 1]} ${date.hYear} ${l10n.hijriSuffix}';
   }
 
   void _syncControllers(HomeLoaded state) {
@@ -130,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _pickHijriDate(HijriCalendar? current) async {
+    final l10n = AppLocalizations.of(context);
     final initial = current ?? HijriCalendar.now();
     int selYear = initial.hYear;
     int selMonth = initial.hMonth;
@@ -142,34 +129,34 @@ class _HomeScreenState extends State<HomeScreen> {
           final maxDays = _daysInHijriMonth(selYear, selMonth);
           if (selDay > maxDays) selDay = maxDays;
           return AlertDialog(
-            title: const Text('تاريخ بداية السنة الهجرية'),
+            title: Text(l10n.hijriDatePickerTitle),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _pickerRow('السنة', DropdownButton<int>(
+                _pickerRow(l10n.yearLabel, DropdownButton<int>(
                   value: selYear,
                   isExpanded: true,
                   items: [
                     for (int y = 1400; y <= 1500; y++)
-                      DropdownMenuItem(value: y, child: Text('$y هـ')),
+                      DropdownMenuItem(value: y, child: Text('$y ${l10n.hijriSuffix}')),
                   ],
                   onChanged: (v) =>
                       setDialogState(() => selYear = v ?? selYear),
                 )),
                 const SizedBox(height: 8),
-                _pickerRow('الشهر', DropdownButton<int>(
+                _pickerRow(l10n.monthLabel, DropdownButton<int>(
                   value: selMonth,
                   isExpanded: true,
                   items: [
-                    for (int m = 0; m < _hijriMonths.length; m++)
+                    for (int m = 0; m < l10n.hijriMonths.length; m++)
                       DropdownMenuItem(
-                          value: m + 1, child: Text(_hijriMonths[m])),
+                          value: m + 1, child: Text(l10n.hijriMonths[m])),
                   ],
                   onChanged: (v) =>
                       setDialogState(() => selMonth = v ?? selMonth),
                 )),
                 const SizedBox(height: 8),
-                _pickerRow('اليوم', DropdownButton<int>(
+                _pickerRow(l10n.dayLabel, DropdownButton<int>(
                   value: selDay,
                   isExpanded: true,
                   items: [
@@ -184,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text(AppStrings.no),
+                child: Text(l10n.no),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(
@@ -194,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ..hMonth = selMonth
                     ..hDay = selDay,
                 ),
-                child: const Text(AppStrings.yes),
+                child: Text(l10n.yes),
               ),
             ],
           );
@@ -208,21 +195,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _confirmReset() async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(AppStrings.resetConfirmTitle),
-        content: const Text(AppStrings.resetConfirmContent),
+        title: Text(l10n.resetConfirmTitle),
+        content: Text(l10n.resetConfirmContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(AppStrings.no),
+            child: Text(l10n.no),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              AppStrings.yes,
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              l10n.yes,
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -259,6 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildLoadedUI(HomeLoaded state) {
+    final l10n = AppLocalizations.of(context);
     final topPad =
         MediaQuery.of(context).padding.top + kToolbarHeight + 8;
 
@@ -269,18 +258,29 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
-          AppStrings.appTitle,
-          style: TextStyle(
+        title: Text(
+          l10n.appTitle,
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
         centerTitle: true,
         actions: [
+          TextButton(
+            onPressed: () => context.read<LocaleCubit>().toggleLocale(),
+            child: Text(
+              l10n.switchLanguageLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            tooltip: AppStrings.resetTooltip,
+            tooltip: l10n.resetTooltip,
             onPressed: _confirmReset,
           ),
         ],
@@ -298,12 +298,12 @@ class _HomeScreenState extends State<HomeScreen> {
               bottom: 24,
             ),
             children: [
-              _buildDateCard(state.hijriDate),
+              _buildDateCard(state.hijriDate, l10n),
               const SizedBox(height: 12),
               ...AppConstants.purities
-                  .map((p) => _buildPurityCard(p, state.grams[p.karat] ?? 0.0)),
+                  .map((p) => _buildPurityCard(p, state.grams[p.karat] ?? 0.0, l10n)),
               const SizedBox(height: 6),
-              _buildResultCard(state.grams),
+              _buildResultCard(state.grams, l10n),
               const SizedBox(height: 24),
             ],
           ),
@@ -314,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
-  Widget _buildDateCard(HijriCalendar? date) {
+  Widget _buildDateCard(HijriCalendar? date, AppLocalizations l10n) {
     return Card(
       elevation: 2,
       color: const Color(0xE0FFFFFF),
@@ -336,9 +336,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      AppStrings.hijriDateLabel,
-                      style: TextStyle(
+                    Text(
+                      l10n.hijriDateLabel,
+                      style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
@@ -346,8 +346,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 4),
                     Text(
                       date != null
-                          ? _formatHijriDate(date)
-                          : AppStrings.selectHijriDate,
+                          ? _formatHijriDate(date, l10n)
+                          : l10n.selectHijriDate,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -359,7 +359,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_left, color: AppColors.textSecondary),
+              Icon(
+                l10n.isArabic ? Icons.chevron_left : Icons.chevron_right,
+                color: AppColors.textSecondary,
+              ),
             ],
           ),
         ),
@@ -367,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPurityCard(Purity purity, double currentGrams) {
+  Widget _buildPurityCard(Purity purity, double currentGrams, AppLocalizations l10n) {
     final karat = purity.karat;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -381,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: Text(
-                  '$karat ${AppStrings.karatSuffix}',
+                  l10n.karatLabel(karat),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -432,10 +435,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 () => _increment(karat, currentGrams),
               ),
               const SizedBox(width: 4),
-              const Text(
-                AppStrings.gramsUnit,
-                style:
-                    TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              Text(
+                l10n.gramsUnit,
+                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -458,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildResultCard(Map<int, double> grams) {
+  Widget _buildResultCard(Map<int, double> grams, AppLocalizations l10n) {
     final total = ZakatCalculator.totalEquivalent(grams);
     final zakatRequired = ZakatCalculator.isZakatRequired(total);
 
@@ -474,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              AppStrings.resultTitle,
+              l10n.resultTitle,
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
@@ -487,15 +489,15 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  AppStrings.total24KLabel,
-                  style: TextStyle(
+                Text(
+                  l10n.total24KLabel,
+                  style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
                   ),
                 ),
                 Text(
-                  '${_formatValue(total)} ${AppStrings.gramsUnit}',
+                  '${_formatValue(total)} ${l10n.gramsUnit}',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -511,16 +513,16 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    AppStrings.zakatDueLabel,
-                    style: TextStyle(
+                  Text(
+                    l10n.zakatDueLabel,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primaryDark,
                     ),
                   ),
                   Text(
-                    '${_formatValue(ZakatCalculator.calculateZakat(total))} ${AppStrings.gramsUnit}',
+                    '${_formatValue(ZakatCalculator.calculateZakat(total))} ${l10n.gramsUnit}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -531,7 +533,7 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             else
               Text(
-                AppStrings.zakatNotRequired,
+                l10n.zakatNotRequired,
                 style: const TextStyle(
                   fontSize: 14,
                   color: Color(0xFF5D4037),

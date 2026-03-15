@@ -70,3 +70,8 @@ Edits:
     - Hijri date picker https://pub.dev/packages/hijri
     change package name to com.superdev.zakahcalc
     and display name to حاسبة زكاة المال
+
+
+Follow up:
+    write privacy policy md for google store
+    email: superdev901@gmail.com

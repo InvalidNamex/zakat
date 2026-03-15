@@ -7,6 +7,7 @@ class StorageService {
   static const String _hijriMonthKey = 'hijri_month';
   static const String _hijriDayKey = 'hijri_day';
   static const String _gramsPrefix = 'grams_';
+  static const String _localeKey = 'locale';
 
   final SharedPreferences _prefs;
 
@@ -49,4 +50,9 @@ class StorageService {
     await _prefs.remove(_hijriMonthKey);
     await _prefs.remove(_hijriDayKey);
   }
+
+  void saveLocale(String languageCode) =>
+      _prefs.setString(_localeKey, languageCode);
+
+  String? getLocale() => _prefs.getString(_localeKey);
 }
