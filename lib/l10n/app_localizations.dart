@@ -44,9 +44,9 @@ class AppLocalizations {
   // ── Purity card ───────────────────────────────────────────────────────────────
 
   String karatLabel(int karat) =>
-      isArabic ? '$karat قيراط' : '${karat}K';
+      isArabic ? '$karat عيار' : '${karat}K';
 
-  String get gramsUnit => isArabic ? 'جم' : 'g';
+  String get gramsUnit => isArabic ? 'جرام' : 'g';
 
   // ── Result card ───────────────────────────────────────────────────────────────
 
@@ -74,6 +74,18 @@ class AppLocalizations {
   String get yes => isArabic ? 'نعم' : 'Yes';
 
   String get no => isArabic ? 'لا' : 'No';
+
+  // ── Price calculator ──────────────────────────────────────────────────────────
+
+  String get pricePerGramLabel =>
+      isArabic ? 'سعر الجرام (عيار 24)' : 'Price per gram (24K)';
+
+  String get priceHint => isArabic ? 'أدخل السعر' : 'Enter price';
+
+  String get zakatValueLabel =>
+      isArabic ? 'قيمة الزكاة بالعملة' : 'Zakat value in currency';
+
+  String get copiedMessage => isArabic ? 'تم النسخ' : 'Copied';
 
   // ── Hijri months ─────────────────────────────────────────────────────────────
 

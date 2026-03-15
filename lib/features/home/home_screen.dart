@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hijri/hijri_calendar.dart';
+import 'package:intl/intl.dart';
 
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
@@ -22,6 +23,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final Map<int, TextEditingController> _controllers = {};
+  final TextEditingController _priceController = TextEditingController();
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     for (final c in _controllers.values) {
       c.dispose();
     }
+    _priceController.dispose();
     super.dispose();
   }
 
@@ -304,6 +307,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   .map((p) => _buildPurityCard(p, state.grams[p.karat] ?? 0.0, l10n)),
               const SizedBox(height: 6),
               _buildResultCard(state.grams, l10n),
+              const SizedBox(height: 12),
+              _buildPriceCard(state.grams, l10n),
               const SizedBox(height: 24),
             ],
           ),
@@ -446,6 +451,123 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildPriceCard(Map<int, double> grams, AppLocalizations l10n) {
+    final total = ZakatCalculator.totalEquivalent(grams);
+    final zakatRequired = ZakatCalculator.isZakatRequired(total);
+    final zakatGrams = zakatRequired ? ZakatCalculator.calculateZakat(total) : 0.0;
+
+    return StatefulBuilder(
+      builder: (context, setCardState) {
+        final priceText = _priceController.text;
+        final pricePerGram = double.tryParse(priceText) ?? 0.0;
+        final zakatValue = zakatGrams * pricePerGram;
+        final formatted = zakatValue > 0
+            ? NumberFormat('#,##0.##').format(zakatValue)
+            : '—';
+
+        return Card(
+          elevation: 2,
+          color: const Color(0xE0FFFFFF),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.pricePerGramLabel,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _priceController,
+                  textAlign: TextAlign.start,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                  ],
+                  decoration: InputDecoration(
+                    hintText: l10n.priceHint,
+                    filled: true,
+                    fillColor: Colors.white,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide:
+                          BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                          color: AppColors.primary, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                  ),
+                  onChanged: (_) => setCardState(() {}),
+                ),
+                if (zakatRequired && pricePerGram > 0) ...[
+                  const SizedBox(height: 12),
+                  Divider(
+                      color: Colors.grey.shade300, height: 1, thickness: 1),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.zakatValueLabel,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            formatted,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.copy,
+                                size: 18, color: AppColors.primary),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: l10n.copiedMessage,
+                            onPressed: () {
+                              Clipboard.setData(
+                                  ClipboardData(text: formatted));
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: Text(l10n.copiedMessage),
+                                duration:
+                                    const Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                              ));
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _counterButton(IconData icon, VoidCallback onPressed) {
     return IconButton(
       icon: Icon(icon, size: 20),
@@ -513,21 +635,48 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    l10n.zakatDueLabel,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryDark,
+                  Expanded(
+                    child: Text(
+                      l10n.zakatDueLabel,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryDark,
+                      ),
                     ),
                   ),
-                  Text(
-                    '${_formatValue(ZakatCalculator.calculateZakat(total))} ${l10n.gramsUnit}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryDark,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${_formatValue(ZakatCalculator.calculateZakat(total))} ${l10n.gramsUnit}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(Icons.copy,
+                            size: 18, color: AppColors.primary),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: l10n.copiedMessage,
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(
+                            text:
+                                '${_formatValue(ZakatCalculator.calculateZakat(total))} ${l10n.gramsUnit}',
+                          ));
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(
+                            content: Text(l10n.copiedMessage),
+                            duration: const Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                          ));
+                        },
+                      ),
+                    ],
                   ),
                 ],
               )
